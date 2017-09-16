@@ -41,8 +41,8 @@ binary indexed tree，树状数组，能在 $$log(n)$$ 时间内查询区间和�
 
 所以：
 
-- $$S_{i}$$ 为，由节点 $$i$$ 开始，边往左边向上爬，途径所有节点的值之和
-- 要修改 $$N_{i}$$ 的值，则边往右边往上爬，修改途径的所有节点的值
+- $$S_{i}$$ 为由节点 $$i$$ 开始，边往左边向上爬，途径所有节点的值之和
+- 当修改了 $$N_{i}$$ 的值，则边往右边往上爬，修改途径的所有节点对应的 $$C$$ 的值
 
 
 ## 实现代码
@@ -52,7 +52,7 @@ binary indexed tree，树状数组，能在 $$log(n)$$ 时间内查询区间和�
 ```python
 class FenwickTree(object):
   def __init__(self, n):
-    self.nodes = [0] * (n + 1)
+    self.c = [0] * (n + 1)
     self.n = n
 
   def __height(self, i):
@@ -60,13 +60,13 @@ class FenwickTree(object):
 
   def add(self, i, value):
     while i <= self.n:
-      self.nodes[i] += value
+      self.c[i] += value
       i += self.__height(i)
 
   def sum(self, i):
     res = 0
     while i > 0:
-      res += self.nodes[i]
+      res += self.c[i]
       i -= self.__height(i)
     return res
 ```
