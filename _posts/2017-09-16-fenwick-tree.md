@@ -49,22 +49,22 @@ binary indexed tree，树状数组，能在 $$log(n)$$ 时间内查询区间和�
 
 ```python
 class FenwickTree(object):
-  def __init__(self, n):
-    self.c = [0] * (n + 1)
-    self.n = n
+    def __init__(self, n):
+        self.c = [0] * (n + 1)
+        self.n = n
 
-  def __height(self, i):
-    return i & -i
+    def __height(self, i):
+        return i & -i
 
-  def add(self, i, value):
-    while i <= self.n:
-      self.c[i] += value
-      i += self.__height(i)
+    def add(self, i, value):
+        while i <= self.n:
+            self.c[i] += value
+            i += self.__height(i)
 
-  def sum(self, i):
-    res = 0
-    while i > 0:
-      res += self.c[i]
-      i -= self.__height(i)
-    return res
+    def sum(self, i):
+        res = 0
+        while i > 0:
+            res += self.c[i]
+            i -= self.__height(i)
+        return res
 ```
