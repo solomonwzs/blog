@@ -173,3 +173,164 @@ ok  	_/home/solomon/workspace/go/t	3.562s
 ```
 
 注意，这个方法触动到底层被隐藏的细节，如果有一天底层的数据结构有改动，程序就会出错，因此除非转换成为瓶颈，否则不建议使用
+
+## 字符串拼接
+
+三种方法，`+=`，`strings.Join`，`buffer.WriteString`
+
+```go
+package main
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+var _s0 = "0123456789"
+
+func strAppend(n int) string {
+	var tmp = ""
+	for i := 0; i < n; i++ {
+		tmp += _s0
+	}
+	return tmp
+}
+
+func sliceAppend(n int) string {
+	tmp := []string{}
+	for i := 0; i < n; i++ {
+		tmp = append(tmp, _s0)
+	}
+	return strings.Join(tmp, "")
+}
+
+func buffAppend(n int) string {
+	var buffer bytes.Buffer
+	for i := 0; i < n; i++ {
+		buffer.WriteString(_s0)
+	}
+	return buffer.String()
+}
+
+func BenchmarkTestStrAppend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		strAppend(1000)
+	}
+}
+
+func BenchmarkTestSliceAppend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		sliceAppend(1000)
+	}
+}
+
+func BenchmarkTestBuffAppend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		buffAppend(1000)
+	}
+}
+```
+
+输出：
+
+```
+-> % go test -v -bench . -benchmem
+goos: linux
+goarch: amd64
+BenchmarkTestStrAppend-4     	    2000	    630157 ns/op	 5320817 B/op	     999 allocs/op
+BenchmarkTestSliceAppend-4   	  100000	     23227 ns/op	   53232 B/op	      13 allocs/op
+BenchmarkTestBuffAppend-4    	  100000	     21174 ns/op	   48800 B/op	      10 allocs/op
+PASS
+ok  	_/home/solomon/workspace/go/t	6.151s
+```
+
+## 数组，Slice 与 Map
+
+```go
+func main() {
+	b0 := [4]byte{0, 1, 2, 3}
+	b1 := []byte{0, 1, 2, 3}
+    m := map[int]int{1: 2}
+	fmt.Println(b0, b1, m)
+}
+```
+
+`b0` 声明的是数组，`b1` 的是 `slice`，`gdb` 里可查看：
+
+```
+(gdb) info locals
+b0 = "\000\001\002\003"
+m = 0xc420086150
+b1 = {array = 0xc42008e010 "", len = 4, cap = 4}
+(gdb) ptype b0
+type = uint8 [4]
+(gdb) ptype b1
+type = struct []uint8 {
+    uint8 *array;
+    int len;
+    int cap;
+}
+(gdb) ptype m
+type = struct hash<int, int> {
+    int count;
+    uint8 flags;
+    uint8 B;
+    uint16 noverflow;
+    uint32 hash0;
+    struct bucket<int, int> *buckets;
+    struct bucket<int, int> *oldbuckets;
+    uintptr nevacuate;
+    struct runtime.mapextra *extra;
+} *
+```
+
+`b0` 是一块连续的内存，`b1` 是一个结构体，包含了一个指针，`m` 是一个结构体指针。
+
+参数传递时，传递 `b0` 时，会拷贝整块内存，在函数内修改数组的内容不会影响到原值。而传递 `b1` 时，拷贝了一个包含了指针的结构体，函数里修改数组时是的修改指针指向的内容，所以会影响到原值。
+
+但要注意，原值之所以会改变，是因为我们改变了 `uint8 *array` 指向的内容，如果我们进行 `append` 等操作，系统可能会重分配内存，结构体内的 `array`，`len`，`cap` 会改变，但这并不会影响原来的结构体
+
+```go
+func foo0(b [4]byte) {
+	b[0] = 44
+}
+
+func foo1(b []byte) {
+	b[0] = 44
+}
+
+func foo2(b []byte) {
+	b = append(b, 55)
+}
+
+func foo3(b *[]byte) {
+	*b = append(*b, 55)
+}
+
+func main() {
+	b0 := [4]byte{0, 1, 2, 3}
+	b1 := []byte{0, 1, 2, 3}
+
+	foo0(b0)
+	fmt.Println("b0 after foo0:", b0)
+
+	foo1(b1)
+	fmt.Println("b1 after foo1:", b1)
+
+	foo2(b1)
+	fmt.Println("b1 after foo2:", b1)
+
+	foo3(&b1)
+	fmt.Println("b1 after foo3:", b1)
+}
+```
+
+输出：
+
+```
+b0 after foo0: [0 1 2 3]
+b1 after foo1: [44 1 2 3]
+b1 after foo2: [44 1 2 3]
+b1 after foo3: [44 1 2 3 55]
+```
