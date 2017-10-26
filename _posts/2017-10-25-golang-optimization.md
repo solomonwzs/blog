@@ -251,8 +251,9 @@ ok  	_/home/solomon/workspace/go/t	6.151s
 func main() {
 	b0 := [4]byte{0, 1, 2, 3}
 	b1 := []byte{0, 1, 2, 3}
-    m := map[int]int{1: 2}
-	fmt.Println(b0, b1, m)
+	m := map[int]int{1: 2}
+	s := "abcd"
+	fmt.Println(b0, b1, m, s)
 }
 ```
 
